@@ -1,6 +1,7 @@
 const { EDESTADDRREQ } = require("constants");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
+const PostService = require("../services/postService")
 const fs = require("fs").promises;
 
 const AWS = require("aws-sdk");
@@ -18,24 +19,19 @@ class PostsController {
 
   static async feed(req, res) {
     try {
-      const posts = await Post.find()
-        .populate("user", ["username", "avatar"])
-        .sort({ createdAt: req.query.sort || -1 }).lean()
-        let feedPosts = posts.map(post => {
-          post.image = PostsController.getPostObject(post.image);
-          console.log(post);
-          return post;
-        })
-        res.send(feedPosts);
-    } catch (error) {
-      console.log(error);
+      let posts = await PostService.get({})
+      if (posts) {
+        res.send(posts);
+      }
+    }
+    catch(err) {
+      console.log(err)
       res.sendStatus(500);
     }
   }
 
   static async create(req, res) {
     const fileName = req.file.filename;
-    // console.log(s3)
     try {
       const fileContent = await fs.readFile("./public/posts/" + fileName);
       const params = {
@@ -55,9 +51,7 @@ class PostsController {
       const newPost = post.save();
       res.status(201).send(newPost);
       });
-      // const imageBase64 = await fs.readFile('public/posts/' + fileName, {
-      //     encoding: 'base64'
-      // });
+
 
     } catch (err) {
       console.log(err);
@@ -69,7 +63,7 @@ class PostsController {
     try {
       let image =  s3.getSignedUrl("getObject", {
         Bucket: keys.bucketName,
-        Key: imageId,
+        Key:  `${keys.folderPosts}/${imageId}`,
       });
       return image;
     } catch (err) {
@@ -88,7 +82,6 @@ class PostsController {
         return;
       }
       post.image = PostsController.getPostObject(post.image);
-      console.log(post);
         return res.json(post);
     } catch (err) {
       console.log(err);
@@ -117,7 +110,6 @@ class PostsController {
   static async unLike(req, res) {
     try {
       const { id } = req.params;
-      console.log(id);
       const post = await Post.findByIdAndUpdate(
         id,
         { $pull: { likes: req.user._id } },
@@ -153,7 +145,6 @@ class PostsController {
         "username",
         "avatar",
       ]);
-      // .execPopulate()
       res.send(comments);
     } catch (error) {
       console.log(error);

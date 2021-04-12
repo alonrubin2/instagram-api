@@ -24,7 +24,7 @@ routes.get('/user/edit/check', UsersController.check);
 
 
 // posts for user page
-routes.get('/user/:username/posts',auth, UsersController.getUserPosts)
+routes.get('/user/:username/posts', auth, UsersController.getUserPosts)
 
 
 // posts
