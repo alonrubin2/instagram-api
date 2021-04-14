@@ -3,6 +3,7 @@ const Post = require('../models/post');
 const md5 = require('md5');
 const jwt = require('jsonwebtoken');
 const { jwtSecret } = require("../config/enviornment/index");
+const PostService = require("../services/postService");
 const fs = require('fs').promises;
 
 
@@ -12,7 +13,7 @@ class UsersController {
     static createUser(req, res) {
         req.body.password = md5(req.body.password);
         const user = new User(req.body);
-        console.log(user,' created')
+        console.log(user, ' created')
         user.save()
             .then((newUser) => {
                 res.status(201).send(newUser);
@@ -56,7 +57,7 @@ class UsersController {
             toUpdate.avatar = imageBase64;
         }
         toUpdate.username = req.body.username;
-        toUpdate.email = req.body.email; 
+        toUpdate.email = req.body.email;
         toUpdate.bio = req.body.bio;
         User.findByIdAndUpdate(
             req.params.id,
@@ -64,13 +65,13 @@ class UsersController {
         )
             .then(user => {
                 User.findById(req.params.id)
-                .then(user => res.send(user))
+                    .then(user => res.send(user))
             })
     }
 
     static me(req, res) {
         User.findById(req.user._id)
-        .then(user => res.send(user))
+            .then(user => res.send(user))
     }
 
     static check(req, res) {
@@ -92,19 +93,19 @@ class UsersController {
     }
 
     static async getUserPosts(req, res) {
+        const user = await User.findOne({
+            username: req.params.username
+        });
+        if (!user) {
+            res.sendStatus(404);
+            return;
+        }
         try {
-            const user = await User.findOne({
-                username: req.params.username
-            });
-            if (!user) {
+            let posts = await PostService.get({ user: user })
+            if (!posts) {
                 res.sendStatus(404);
                 return;
             }
-            const posts = await Post.find({
-                user: user._id
-            })
-                .populate('user', ['username', 'avatar'])
-                .sort({ createdAt: req.query.sort || -1 });
             res.send(posts);
         }
         catch (err) {
@@ -123,7 +124,7 @@ class UsersController {
                 return;
             }
             const { _id, username, avatar } = user;
-           res.send(user);
+            res.send(user);
         }
         catch (err) {
             console.log(err);
@@ -153,7 +154,7 @@ class UsersController {
 
     static async findOneUser(req, res) {
         try {
-            const {username} = req.query;
+            const { username } = req.query;
             const foundUser = await User.findOne({
                 username
             });
@@ -161,22 +162,22 @@ class UsersController {
                 res.sendStatus(404);
                 return;
             }
-            const {_id, name, avatar} = foundUser;
+            const { _id, name, avatar } = foundUser;
             console.log(foundUser)
             return foundUser;
         }
-        catch(err) {
+        catch (err) {
             console.log(err);
             sendStatus(500);
         }
-   
+
     }
 
     static async follow(req, res) {
         try {
             const { id } = req.params;
             const followerId = req.user._id;
-            if ( id === followerId) {
+            if (id === followerId) {
                 res.sendStatus(400);
                 return;
             }
@@ -190,7 +191,7 @@ class UsersController {
             }
             res.status(200).send({
                 userId: user._id,
-                avatar: user.avatar, 
+                avatar: user.avatar,
                 username: user.username,
                 followers: user.followers
             });
@@ -209,7 +210,7 @@ class UsersController {
             const user = await User.findByIdAndUpdate(id, { $pull: { followers: req.user._id } }, { new: true });
             res.status(200).send({
                 userId: user._id,
-                avatar: user.avatar, 
+                avatar: user.avatar,
                 username: user.username,
                 followers: user.followers
             });

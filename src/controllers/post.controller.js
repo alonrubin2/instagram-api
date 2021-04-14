@@ -1,11 +1,16 @@
-const { EDESTADDRREQ } = require("constants");
+const {
+  EDESTADDRREQ
+} = require("constants");
 const Post = require("../models/post");
 const Comment = require("../models/comment");
 const PostService = require("../services/postService")
 const fs = require("fs").promises;
 
 const AWS = require("aws-sdk");
-const { keys, mapKey } = require("../keys/keys");
+const {
+  keys,
+  mapKey
+} = require("../keys/keys");
 
 const s3 = new AWS.S3({
   accessKeyId: keys.ID,
@@ -23,8 +28,7 @@ class PostsController {
       if (posts) {
         res.send(posts);
       }
-    }
-    catch(err) {
+    } catch (err) {
       console.log(err)
       res.sendStatus(500);
     }
@@ -36,7 +40,7 @@ class PostsController {
       const fileContent = await fs.readFile("./public/posts/" + fileName);
       const params = {
         Bucket: keys.bucketName,
-        Key: fileName,
+        Key: `${keys.folderPosts}/${fileName}`,
         Body: fileContent,
       };
       console.log("create", req.file.filename);
@@ -48,8 +52,8 @@ class PostsController {
           north: req.body.north,
           east: req.body.east,
         });
-      const newPost = post.save();
-      res.status(201).send(newPost);
+        const newPost = post.save();
+        res.status(201).send(newPost);
       });
 
 
@@ -59,11 +63,11 @@ class PostsController {
     }
   }
 
-  static  getPostObject(imageId) {
+  static getPostObject(imageId) {
     try {
-      let image =  s3.getSignedUrl("getObject", {
+      let image = s3.getSignedUrl("getObject", {
         Bucket: keys.bucketName,
-        Key:  `${keys.folderPosts}/${imageId}`,
+        Key: `${keys.folderPosts}/${imageId}`,
       });
       return image;
     } catch (err) {
@@ -72,17 +76,14 @@ class PostsController {
   }
 
   static async getOnePost(req, res) {
+    let id = req.params.id
     try {
-      let post = await Post.findById(req.params.id).populate("user", [
-        "username",
-        "avatar",
-      ]).lean();
+      let post = await PostService.get({ id: id });
       if (!post) {
         res.sendStatus(404);
         return;
       }
-      post.image = PostsController.getPostObject(post.image);
-        return res.json(post);
+       res.send(post[0]);
     } catch (err) {
       console.log(err);
       res.sendStatus(500);
@@ -93,12 +94,18 @@ class PostsController {
 
   static async like(req, res) {
     try {
-      const { id } = req.params;
+      const {
+        id
+      } = req.params;
       console.log(req.user._id);
       const post = await Post.findByIdAndUpdate(
-        id,
-        { $addToSet: { likes: req.user._id } },
-        { new: true }
+        id, {
+        $addToSet: {
+          likes: req.user._id
+        }
+      }, {
+        new: true
+      }
       );
       res.status(200).send(post);
     } catch (err) {
@@ -109,11 +116,17 @@ class PostsController {
 
   static async unLike(req, res) {
     try {
-      const { id } = req.params;
+      const {
+        id
+      } = req.params;
       const post = await Post.findByIdAndUpdate(
-        id,
-        { $pull: { likes: req.user._id } },
-        { new: true }
+        id, {
+        $pull: {
+          likes: req.user._id
+        }
+      }, {
+        new: true
+      }
       );
       res.status(200).send(post);
     } catch (err) {
@@ -141,7 +154,9 @@ class PostsController {
   static async getAllComments(req, res) {
     const postId = req.params.id;
     try {
-      const comments = await Comment.find({ postId }).populate("user", [
+      const comments = await Comment.find({
+        postId
+      }).populate("user", [
         "username",
         "avatar",
       ]);

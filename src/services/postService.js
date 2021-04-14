@@ -14,11 +14,11 @@ const s3 = new AWS.S3({
 class PostService {
 
 
-  static  getPostObject(imageId) {
+  static getPostObject(imageId) {
     try {
-      let image =  s3.getSignedUrl("getObject", {
+      let image = s3.getSignedUrl("getObject", {
         Bucket: keys.bucketName,
-        Key:  `${keys.folderPosts}/${imageId}`,
+        Key: `${keys.folderPosts}/${imageId}`,
       });
       return image;
     } catch (err) {
@@ -27,33 +27,34 @@ class PostService {
   }
 
 
-    static async get(params) {
-      let posts;
-        try {
-       if (params.id) {        
-       posts = Post.findById(params.id)   
-    }
-    else if (params.user) {
-             posts = Post.find({
-                user: user._id
-            })
-    }
-    else {
-       posts = Post.find()
-    }
-    posts = await posts
-    .populate("user", ["username", "avatar"])
-    .sort({ createdAt: -1 }).lean()
-        }
-        catch(err) {
-          console.log(err);
-          return [];
-        }
-          posts.forEach(post => {
-          post.image = PostService.getPostObject(post.image);
+  static async get(params) {
+    console.log(params);
+    let posts;
+    try {
+      if (params.id) {
+        posts = Post.find({ _id: params.id })
+      }
+      else if (params.user) {
+        posts = Post.find({
+          user: params.user._id
         })
-        return posts;
-            }
+      }
+      else {
+        posts = Post.find()
+      }
+      posts = await posts
+        .populate("user", ["username", "avatar"])
+        .sort({ createdAt: -1 }).lean()
+    }
+    catch (err) {
+      console.log(err);
+      return [];
+    }
+    posts.forEach(post => {
+      post.image = PostService.getPostObject(post.image);
+    })
+    return posts;
+  }
 }
 
 module.exports = PostService;
